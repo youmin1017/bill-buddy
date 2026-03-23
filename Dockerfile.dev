@@ -1,0 +1,13 @@
+FROM golang:1.25-alpine
+
+WORKDIR /app
+
+# 安裝 Git (某些 Go 套件下載需要)
+# RUN apk add --no-cache git
+
+# 安裝最新的 Air 熱重載工具 (注意：官方 repo 已移至 air-verse)
+RUN go install github.com/air-verse/air@latest
+
+# 因為程式碼已經透過 docker-compose volume 掛載進來，
+# 所以這裡不用 COPY 程式碼，直接設定預設啟動指令為 air 即可。
+CMD ["air"]

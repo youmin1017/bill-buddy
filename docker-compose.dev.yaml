@@ -1,0 +1,14 @@
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./:/app
+      - sqlitedata_dev:/app/data
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - DATABASE_URL=file:/app/data/bill-buddy.db?cache=shared&_pragma=foreign_keys(1)
+
+volumes:
+  sqlitedata_dev:

@@ -1,0 +1,2 @@
+databaseUrl: "file:bill-buddy.db?cache=shared&_pragma=foreign_keys(1)"
+telegramBotToken: ""
