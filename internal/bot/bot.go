@@ -44,13 +44,13 @@ func newBot(i do.Injector) (*tgbot.Bot, error) {
 		return nil, err
 	}
 
-	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/help", tgbot.MatchTypeExact, h.helpHandler)
-	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/add", tgbot.MatchTypePrefix, h.addHandler)
-	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/pay", tgbot.MatchTypePrefix, h.payHandler)
-	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/history", tgbot.MatchTypeExact, h.historyHandler)
-	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/settle", tgbot.MatchTypeExact, h.settleHandler)
-	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/delete", tgbot.MatchTypePrefix, h.deleteHandler)
-	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/modify", tgbot.MatchTypePrefix, h.modifyHandler)
+	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/help", tgbot.MatchTypeExact, normalizeCommand(h.helpHandler))
+	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/add", tgbot.MatchTypePrefix, normalizeCommand(h.addHandler))
+	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/pay", tgbot.MatchTypePrefix, normalizeCommand(h.payHandler))
+	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/list", tgbot.MatchTypeExact, normalizeCommand(h.listHandler))
+	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/settle", tgbot.MatchTypeExact, normalizeCommand(h.settleHandler))
+	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/delete", tgbot.MatchTypePrefix, normalizeCommand(h.deleteHandler))
+	b.RegisterHandler(tgbot.HandlerTypeMessageText, "/modify", tgbot.MatchTypePrefix, normalizeCommand(h.modifyHandler))
 
 	return b, nil
 }
@@ -67,7 +67,7 @@ func newApp(i do.Injector) (*App, error) {
 		Commands: []models.BotCommand{
 			{Command: "add", Description: "新增一筆由你支付的分攤費用"},
 			{Command: "pay", Description: "代付對方的全額費用"},
-			{Command: "history", Description: "查詢歷史紀錄與結算"},
+			{Command: "list", Description: "查詢歷史紀錄與結算"},
 			{Command: "settle", Description: "結清所有帳目並清空紀錄"},
 			{Command: "delete", Description: "刪除指定紀錄"},
 			{Command: "modify", Description: "修改指定紀錄"},
@@ -80,6 +80,22 @@ func newApp(i do.Injector) (*App, error) {
 	}()
 
 	return app, nil
+}
+
+// normalizeCommand strips the @botname suffix from commands so that
+// "/settle@bill_buddy" is treated the same as "/settle".
+func normalizeCommand(next tgbot.HandlerFunc) tgbot.HandlerFunc {
+	return func(ctx context.Context, b *tgbot.Bot, update *models.Update) {
+		if update.Message != nil {
+			if fields := strings.Fields(update.Message.Text); len(fields) > 0 {
+				if idx := strings.Index(fields[0], "@"); idx != -1 {
+					fields[0] = fields[0][:idx]
+					update.Message.Text = strings.Join(fields, " ")
+				}
+			}
+		}
+		next(ctx, b, update)
+	}
 }
 
 func sendText(ctx context.Context, b *tgbot.Bot, chatID int64, text string) {
@@ -206,8 +222,8 @@ func (h *handler) payHandler(ctx context.Context, b *tgbot.Bot, update *models.U
 	sendText(ctx, b, chatID, msg)
 }
 
-// /history — show all records and balance
-func (h *handler) historyHandler(ctx context.Context, b *tgbot.Bot, update *models.Update) {
+// /list — show all records and balance
+func (h *handler) listHandler(ctx context.Context, b *tgbot.Bot, update *models.Update) {
 	if update.Message == nil {
 		return
 	}
@@ -444,7 +460,7 @@ func (h *handler) helpHandler(ctx context.Context, b *tgbot.Bot, update *models.
 
 /add <金額> [說明] - 新增一筆由你支付的分攤費用（另一人還一半）
 /pay <金額> [說明] - 代付對方的費用（另一人還全額）
-/history - 查詢歷史紀錄與結算
+/list - 查詢歷史紀錄與結算
 /settle - 結清所有帳目並清空紀錄
 /delete <id> - 刪除指定紀錄
 /modify <id> <金額> [說明] - 修改指定紀錄
